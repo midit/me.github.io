@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Case study: SunBot on AWS — Maksym Patrushev</title>
+    <meta name="description" content="How I moved a live production Discord bot to a reproducible AWS stack defined entirely in Terraform — EC2, RDS, S3, VPC, cost budgets.">
+    <link rel="canonical" href="https://maksympatrushev.com/sunbot-infra.html">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='24'>⚡</text></svg>">
+    <meta property="og:type" content="article">
+    <meta property="og:title" content="Case study: SunBot on AWS (Infrastructure as Code)">
+    <meta property="og:description" content="Live production bot → reproducible AWS stack in Terraform: EC2, RDS, S3, VPC, budgets.">
+    <meta property="og:url" content="https://maksympatrushev.com/sunbot-infra.html">
+    <meta property="og:image" content="https://maksympatrushev.com/og.png">
+    <meta name="twitter:card" content="summary_large_image">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: radial-gradient(circle at 50% 0%, #18181b 0%, #09090b 60%); }
+        .prose h2 { color: #fafafa; font-weight: 600; font-size: 1.05rem; margin-top: 2rem; margin-bottom: .6rem; }
+        .prose p, .prose li { color: #a1a1aa; font-weight: 300; line-height: 1.7; font-size: .93rem; }
+        .prose li { margin-bottom: .35rem; }
+        .prose b { color: #e4e4e7; font-weight: 500; }
+    </style>
+</head>
+<body class="text-zinc-100 min-h-screen px-5 py-12 selection:bg-white selection:text-black">
+
+    <article class="max-w-2xl mx-auto">
+
+        <a href="/" class="text-xs text-zinc-500 hover:text-zinc-300 transition font-mono">← maksympatrushev.com</a>
+
+        <header class="mt-6 space-y-3">
+            <p class="text-[11px] text-blue-400 uppercase tracking-[0.2em] font-semibold">Case study · DevOps</p>
+            <h1 class="text-3xl md:text-4xl font-bold text-white leading-tight">SunBot → AWS, as code</h1>
+            <p class="text-sm text-zinc-400 font-light leading-relaxed">
+                I took a live production Discord bot (35+ servers, 90k+ member reach) and rebuilt its
+                environment as a reproducible AWS stack defined entirely in <b>Terraform</b> — provisioned
+                from scratch with a single <code class="text-zinc-300">terraform apply</code>.
+            </p>
+            <div class="flex flex-wrap gap-2 pt-1">
+                <span class="px-2.5 py-1 text-xs bg-zinc-900 border border-zinc-800 rounded-md font-mono text-zinc-300">Terraform</span>
+                <span class="px-2.5 py-1 text-xs bg-zinc-900 border border-zinc-800 rounded-md font-mono text-zinc-300">AWS</span>
+                <span class="px-2.5 py-1 text-xs bg-zinc-900 border border-zinc-800 rounded-md font-mono text-zinc-300">Docker</span>
+                <span class="px-2.5 py-1 text-xs bg-zinc-900 border border-zinc-800 rounded-md font-mono text-zinc-300">Linux</span>
+            </div>
+        </header>
+
+        <div class="prose mt-4">
+
+            <h2>The problem</h2>
+            <ul class="list-disc pl-5">
+                <li>The bot ran on managed hosting — one-click, but a black box you can't reproduce or review.</li>
+                <li>No infrastructure as code: nothing described, versioned, or repeatable.</li>
+                <li>Backups lived on the <b>same host</b> as the bot — a single point of failure.</li>
+                <li>MySQL shared one tiny instance with the app.</li>
+            </ul>
+
+            <h2>Approach</h2>
+            <p>Built incrementally — every step a working <code class="text-zinc-300">terraform apply</code> I could inspect and tear down, so nothing was a big-bang risk:</p>
+            <ul class="list-disc pl-5">
+                <li><b>S3</b> bucket for off-site backups (versioned, private, auto-expiring) — safety first.</li>
+                <li><b>EC2</b> + security group (SSH locked to my IP) + SSH key pair.</li>
+                <li>Containerized deploy via Docker Compose; code pulled with a read-only <b>deploy key</b>.</li>
+                <li><b>RDS</b> managed MySQL, reachable only from the app's security group (SG-to-SG, never public).</li>
+                <li><b>AWS Budgets</b> cost guardrail with email alerts.</li>
+            </ul>
+
+            <h2>Architecture</h2>
+            <pre class="text-[11px] md:text-xs text-zinc-400 bg-zinc-900/50 border border-zinc-800 rounded-xl p-4 overflow-x-auto font-mono leading-relaxed">
+        AWS eu-central-1 (default VPC)
+  you ──SSH(22)──▶ EC2 t3.micro ──MySQL(3306)──▶ RDS MySQL
+                  (Docker: bot)                 private, SG-locked
+                        │
+                        └── off-site dumps ──▶ S3 (versioned)
+
+  AWS Budgets watches spend · all defined in Terraform</pre>
+
+            <h2>Decisions &amp; lessons</h2>
+            <ul class="list-disc pl-5">
+                <li><b>Private database:</b> RDS accepts traffic only from the EC2's security group — no public endpoint, no IP allow-listing to maintain.</li>
+                <li><b>Guardrails before compute:</b> set the cost budget first, so spinning up RDS/Lambda couldn't surprise me with a bill.</li>
+                <li><b>Real debugging:</b> the 1 GB instance OOM-locked under MySQL + build load; diagnosed it and added swap, then moved the DB off the box onto RDS entirely.</li>
+                <li><b>Honest scope:</b> this is a reproducible, demonstrated deployment; production still runs on the managed host — the value here is the IaC, not a risky cut-over of a live user-facing product.</li>
+            </ul>
+
+            <h2>What's next</h2>
+            <p>Kubernetes (kind) for orchestration and deeper Grafana/Prometheus dashboards-as-code — extending the same repo.</p>
+
+        </div>
+
+        <div class="mt-8 grid grid-cols-2 gap-3">
+            <a href="https://github.com/midit/sunbot-infra" target="_blank" rel="noopener noreferrer"
+               class="block py-3 px-4 rounded-xl bg-white text-black hover:bg-zinc-100 text-sm font-semibold text-center transition">
+                View the code ↗
+            </a>
+            <a href="https://sunbotapp.com" target="_blank" rel="noopener noreferrer"
+               class="block py-3 px-4 rounded-xl bg-zinc-900/60 border border-zinc-800 hover:border-zinc-600 text-sm font-medium text-zinc-300 text-center transition">
+                See the live bot ↗
+            </a>
+        </div>
+
+        <footer class="mt-10 text-[11px] text-zinc-600 font-mono tracking-wider text-center">
+            <a href="/" class="hover:text-zinc-300 transition">← back home</a>
+        </footer>
+
+    </article>
+
+</body>
+</html>
