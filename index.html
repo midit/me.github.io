@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Maksym Patrushev</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Plus+Jakarta+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: radial-gradient(circle at center, #111827 0%, #030712 100%);
+        }
+        .handwritten {
+            font-family: 'Caveat', cursive;
+        }
+        .glow-btn {
+            transition: all 0.3s ease;
+        }
+        .glow-btn:hover {
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.08);
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body class="text-gray-100 min-h-screen flex flex-col justify-between items-center px-6 py-12 selection:bg-white selection:text-black">
+
+    <!-- Верхній пустий блок для балансу вертикального центрування -->
+    <div></div>
+
+    <!-- Основний контент -->
+    <div class="w-full max-w-md text-center space-y-10 my-auto">
+        
+        <!-- Вітання -->
+        <div class="space-y-2">
+            <h1 class="text-5xl md:text-6xl text-white handwritten tracking-wide">
+                Hi, I'm Maksym
+            </h1>
+            <p class="text-xs md:text-sm text-gray-500 uppercase tracking-widest font-light">
+                DevOps / MLOps Engineer
+            </p>
+        </div>
+
+        <!-- Кнопки-посилання -->
+        <div class="flex flex-col space-y-3.5">
+            <a href="https://github.com/midit" target="_blank" rel="noopener noreferrer" 
+               class="glow-btn block w-full py-3.5 px-6 rounded-xl bg-gray-900/60 border border-gray-800/80 hover:border-gray-600 text-sm font-medium tracking-wide text-gray-200 hover:text-white backdrop-blur-md">
+                GitHub
+            </a>
+            
+            <a href="https://www.linkedin.com/in/patrushevx" target="_blank" rel="noopener noreferrer" 
+               class="glow-btn block w-full py-3.5 px-6 rounded-xl bg-gray-900/60 border border-gray-800/80 hover:border-gray-600 text-sm font-medium tracking-wide text-gray-200 hover:text-white backdrop-blur-md">
+                LinkedIn
+            </a>
+            
+            <a href="mailto:contact@maksympatrushev.com" 
+               class="glow-btn block w-full py-3.5 px-6 rounded-xl bg-white text-black hover:bg-gray-100 text-sm font-semibold tracking-wide">
+                Email Me
+            </a>
+        </div>
+    </div>
+
+    <!-- Футер із заділом на майбутній DevOps-routing -->
+    <div class="text-[11px] text-gray-600 font-mono tracking-wider text-center space-y-1">
+        <p>contact@maksympatrushev.com</p>
+        <p class="opacity-40">Deployed via GitHub Pages</p>
+    </div>
+
+</body>
+</html>
